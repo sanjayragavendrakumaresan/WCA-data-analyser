@@ -14,7 +14,7 @@ class PredictiveMenuMixin:
     def predictive_models_menu(self):
             """Predictive models menu"""
             print("\n" + "="*60)
-            print("🤖 PREDICTIVE MODELS")
+            print(" PREDICTIVE MODELS")
             print("="*60)
 
             print("\n1. Forecast World Records (Linear Regression)")
@@ -34,7 +34,7 @@ class PredictiveMenuMixin:
             event_id = input("Enter event ID to forecast (default: 333): ").strip() or '333'
 
             if 'results' not in self.data or self.data['results'].empty:
-                print("❌ No results data available")
+                print(" No results data available")
                 return
 
             event_results = self.data['results'][
@@ -47,15 +47,15 @@ class PredictiveMenuMixin:
             ]
 
             if event_results.empty:
-                print(f"❌ No data for event {event_id}")
+                print(f" No data for event {event_id}")
                 return
 
-            # Calculate yearly best and world record progression
+                                                                
             yearly_best = event_results.groupby('year')['best_seconds'].min().reset_index()
             yearly_best = yearly_best.sort_values('year')
             yearly_best['wr'] = yearly_best['best_seconds'].cummin()
 
-            # Get the actual world record holders
+                                                 
             wr_progression = []
             current_wr = float('inf')
             for _, row in yearly_best.iterrows():
@@ -66,7 +66,7 @@ class PredictiveMenuMixin:
             wr_df = pd.DataFrame(wr_progression)
 
             if len(wr_df) >= 3:
-                # Linear regression on WR progression
+                                                     
                 X = wr_df['year'].values.reshape(-1, 1)
                 y = wr_df['best_seconds'].values
 
@@ -77,23 +77,23 @@ class PredictiveMenuMixin:
                 future_years = np.arange(last_year + 1, last_year + 11)
                 forecast = model.predict(future_years.reshape(-1, 1))
 
-                # Calculate confidence intervals
+                                                
                 residuals = y - model.predict(X)
                 ci = 1.96 * np.std(residuals)
 
-                print(f"\n📈 WORLD RECORD FORECAST FOR {self.competitor_analyzer.event_names.get(event_id, event_id)}:")
+                print(f"\n WORLD RECORD FORECAST FOR {self.competitor_analyzer.event_names.get(event_id, event_id)}:")
                 print(f"   Current WR: {wr_df['best_seconds'].iloc[-1]:.2f}s ({int(wr_df['year'].iloc[-1])})")
                 print(f"   Trend: {model.coef_[0]:.3f}s per year improvement")
-                print(f"   R² Score: {r2_score(y, model.predict(X)):.3f}")
+                print(f"   R^2 Score: {r2_score(y, model.predict(X)):.3f}")
                 print("\n   Forecast:")
                 for year, pred in zip(future_years, forecast):
-                    print(f"     {int(year)}: {pred:.2f}s ±{ci:.2f}s")
+                    print(f"     {int(year)}: {pred:.2f}s +/-{ci:.2f}s")
 
-                # Plot the forecast
+                                   
                 fig, axes = plt.subplots(1, 2, figsize=(14, 5))
                 fig.suptitle(f'{self.competitor_analyzer.event_names.get(event_id, event_id)} World Record Forecast', fontsize=14, fontweight='bold')
 
-                # Plot 1: Historical WR progression
+                                                   
                 axes[0].plot(wr_df['year'], wr_df['best_seconds'], 'o-', linewidth=2, markersize=8, label='Historical WR', color='#2E86AB')
                 axes[0].plot(future_years, forecast, 'r--', linewidth=2, label='Forecast', color='#A23B72')
                 axes[0].fill_between(future_years, forecast - ci, forecast + ci, alpha=0.2, color='#F18F01', label='95% CI')
@@ -102,9 +102,9 @@ class PredictiveMenuMixin:
                 axes[0].set_title('WR Progression & Forecast')
                 axes[0].legend()
                 axes[0].grid(True, alpha=0.3)
-                axes[0].invert_yaxis()  # Lower times are better
+                axes[0].invert_yaxis()                          
 
-                # Plot 2: Distribution of top times
+                                                   
                 top_times = event_results.nsmallest(100, 'best_seconds')
                 axes[1].hist(top_times['best_seconds'], bins=20, edgecolor='black', alpha=0.7, color='#C73E1D')
                 axes[1].axvline(wr_df['best_seconds'].iloc[-1], color='#2E86AB', linewidth=2, label=f'Current WR: {wr_df["best_seconds"].iloc[-1]:.2f}s')
@@ -118,7 +118,7 @@ class PredictiveMenuMixin:
                 plt.tight_layout()
                 plt.show()
             else:
-                print("❌ Not enough WR progression data for forecasting")
+                print(" Not enough WR progression data for forecasting")
 
 
     def cluster_competitors(self):
@@ -126,7 +126,7 @@ class PredictiveMenuMixin:
             event_id = input("Enter event ID to cluster (default: 333): ").strip() or '333'
 
             if 'results' not in self.data or self.data['results'].empty:
-                print("❌ No results data available")
+                print(" No results data available")
                 return
 
             event_results = self.data['results'][
@@ -136,10 +136,10 @@ class PredictiveMenuMixin:
             ]
 
             if event_results.empty:
-                print(f"❌ No data for event {event_id}")
+                print(f" No data for event {event_id}")
                 return
 
-            # Calculate competitor statistics
+                                             
             comp_stats = event_results.groupby('person_id').agg({
                 'average_seconds': ['mean', 'std', 'min', 'count']
             }).round(2)
@@ -148,18 +148,18 @@ class PredictiveMenuMixin:
             comp_stats = comp_stats[comp_stats['num_solves'] >= 5].copy()
 
             if len(comp_stats) < 20:
-                print("❌ Not enough competitors with sufficient solves for clustering")
+                print(" Not enough competitors with sufficient solves for clustering")
                 return
 
-            # Prepare features for clustering
+                                             
             features = ['avg_time', 'std_time', 'best_time']
             X = comp_stats[features].fillna(0)
 
-            # Normalize features
+                                
             scaler = StandardScaler()
             X_scaled = scaler.fit_transform(X)
 
-            # Determine optimal number of clusters (elbow method)
+                                                                 
             inertias = []
             K_range = range(2, 8)
             for k in K_range:
@@ -167,22 +167,22 @@ class PredictiveMenuMixin:
                 kmeans.fit(X_scaled)
                 inertias.append(kmeans.inertia_)
 
-            optimal_k = 3  # Default
+            optimal_k = 3           
 
-            # Perform clustering with optimal_k
+                                               
             kmeans = KMeans(n_clusters=optimal_k, random_state=42, n_init=10)
             comp_stats['cluster'] = kmeans.fit_predict(X_scaled)
 
-            # Create figure
+                           
             fig, axes = plt.subplots(1, 2, figsize=(14, 6))
             fig.suptitle(f'Competitor Clustering - {self.competitor_analyzer.event_names.get(event_id, event_id)}', fontsize=14, fontweight='bold')
 
-            # Try PCA for visualization
+                                       
             try:
                 pca = PCA(n_components=2)
                 X_pca = pca.fit_transform(X_scaled)
 
-                # Plot 1: PCA visualization
+                                           
                 scatter = axes[0].scatter(X_pca[:, 0], X_pca[:, 1],
                                          c=comp_stats['cluster'], cmap='viridis',
                                          s=50, alpha=0.6)
@@ -192,7 +192,7 @@ class PredictiveMenuMixin:
                 plt.colorbar(scatter, ax=axes[0], label='Cluster')
                 axes[0].grid(True, alpha=0.3)
             except:
-                # If PCA fails, just show avg_time vs std_time
+                                                              
                 scatter = axes[0].scatter(comp_stats['avg_time'], comp_stats['std_time'],
                                          c=comp_stats['cluster'], cmap='viridis',
                                          s=50, alpha=0.6)
@@ -202,7 +202,7 @@ class PredictiveMenuMixin:
                 plt.colorbar(scatter, ax=axes[0], label='Cluster')
                 axes[0].grid(True, alpha=0.3)
 
-            # Plot 2: Cluster characteristics
+                                             
             cluster_summary = comp_stats.groupby('cluster')[['avg_time', 'std_time', 'best_time', 'num_solves']].mean()
 
             x = np.arange(len(cluster_summary))
@@ -224,10 +224,10 @@ class PredictiveMenuMixin:
             plt.tight_layout()
             plt.show()
 
-            print("\n📊 CLUSTER ANALYSIS:")
+            print("\n CLUSTER ANALYSIS:")
             for i in range(optimal_k):
                 cluster_data = comp_stats[comp_stats['cluster'] == i]
                 print(f"\n   Cluster {i}: {len(cluster_data)} competitors")
-                print(f"     Avg Time: {cluster_data['avg_time'].mean():.2f}s ± {cluster_data['std_time'].mean():.2f}s")
+                print(f"     Avg Time: {cluster_data['avg_time'].mean():.2f}s +/- {cluster_data['std_time'].mean():.2f}s")
                 print(f"     Best Time: {cluster_data['best_time'].mean():.2f}s")
                 print(f"     Avg Solves: {cluster_data['num_solves'].mean():.0f}")

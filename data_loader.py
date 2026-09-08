@@ -8,14 +8,39 @@ from .config import FILE_CONFIGS
 
 
 class WCADataLoader:
-    def __init__(self, data_path='./'):
-            self.data_path = Path(data_path)
-            self.data = {}
+    def __init__(self, data_path=None):
+        self.data_path = self._find_data_path(data_path)
+        self.data = {}
+
+    def _find_data_path(self, data_path):
+        if data_path is not None:
+            candidate = Path(data_path).expanduser().resolve()
+            if candidate.is_dir() and any((candidate / config['file']).exists() for config in FILE_CONFIGS.values()):
+                return candidate
+
+        roots = [
+            Path.cwd(),
+            Path(__file__).resolve().parent,
+            Path(__file__).resolve().parent / 'data',
+        ]
+
+        for root in roots:
+            if root.is_dir() and any((root / config['file']).exists() for config in FILE_CONFIGS.values()):
+                return root
+
+        search_roots = [Path.cwd(), Path(__file__).resolve().parent]
+        for root in search_roots:
+            if not root.exists():
+                continue
+            for result_file in root.rglob('WCA_export_results.tsv'):
+                return result_file.parent
+
+        return Path.cwd()
 
 
     def load_all_files(self):
             """Load all TSV files"""
-            print("\n📂 Loading WCA data files...")
+            print(f"\nLoading WCA data files from: {self.data_path}")
 
             file_configs = FILE_CONFIGS
             
@@ -29,9 +54,9 @@ class WCADataLoader:
                         on_bad_lines='skip'
                     )
                     self.data[key] = df
-                    print(f"  ✅ Loaded {key}: {len(df):,} records")
+                    print(f"   Loaded {key}: {len(df):,} records")
                 except Exception as e:
-                    print(f"  ❌ Error loading {key}: {str(e)}")
+                    print(f"   Error loading {key}: {str(e)}")
                     self.data[key] = pd.DataFrame()
 
             return self.data
@@ -39,29 +64,29 @@ class WCADataLoader:
 
     def preprocess_data(self):
             """Clean and preprocess the loaded data"""
-            print("\n🔄 Preprocessing data...")
+            print("\nPreprocessing data...")
 
             if 'results' in self.data and not self.data['results'].empty:
-                # Convert time fields from centiseconds to seconds
+                                                                  
                 for col in ['best', 'average']:
                     if col in self.data['results'].columns:
                         self.data['results'][f'{col}_seconds'] = self.data['results'][col] / 100
-                        # Handle DNF, DNS etc.
+                                              
                         mask = self.data['results'][col] > 99999999
                         self.data['results'].loc[mask, f'{col}_seconds'] = np.nan
                         self.data['results'].loc[self.data['results'][f'{col}_seconds'] < 0, f'{col}_seconds'] = np.nan
 
-                # Extract year from competition IDs
+                                                   
                 if 'competition_id' in self.data['results'].columns:
-                    # Extract 4-digit year using string slicing
+                                                               
                     self.data['results']['year'] = self.data['results']['competition_id'].str.extract(r'(\d{4})').astype(float)
                     self.data['results'].loc[self.data['results']['year'] < 2000, 'year'] = np.nan
 
-            # Create event name mapping
+                                       
             if 'events' in self.data and not self.data['events'].empty:
                 self.event_names = dict(zip(self.data['events']['id'], self.data['events']['name']))
             else:
                 self.event_names = {}
 
-            print("✅ Preprocessing complete!")
+            print("Preprocessing complete.")
             return self.data
